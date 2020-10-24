@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload-Download</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+      direction: ltr;
+      height: 300px;
+      width: 200px;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="//mozilla.github.io/pdf.js/build/pdf.js"></script>
+  <!--Uploading form-->
+  <form method="POST" enctype="multipart/form-data" action="/upload">
+    <h1 id='heading'>Upload/Download</h1>
+    <label for='file'><input type="file" name='file' id='file'></label><br>
+    <label for='author'>Book Name<br><input type="text" name="author" id="author"></label><br>
+    <label for="desc">Description<br><textarea name="desc" id="desc" cols="30" rows="10"></textarea></label><br>
+    <input type="submit" value="Submit">
+    <hr>
+  </form>
+
+  <div id='pdfStoring'>
+    <!-- files is the variable for ejs , it works when a file is been uploaded else only the above code is just rendered -->
+    <% if(files){ 
+            files.forEach((file)=>{%>
+    <canvas id="<%= file.filename%>"></canvas>
+    <!-- This below comment code can be used to show the pdf directly-->
+    <!--<embed width="300" height="375" src="pdf/<%= file.filename %>#toolbar=0">--> 
+    <script>
+      //url for the file to be uploaded
+      var url = 'pdf/<%= file.filename %>';
+      // Loaded via <script> tag, create shortcut to access PDF.js exports.
+      var pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+      // The workerSrc property shall be specified.
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+
+      //Below code is directly taken from pdf.js site to load the first page from the pdf
+      var loadingTask = pdfjsLib.getDocument(url);
+      loadingTask.promise.then(function (pdf) {
+        console.log('PDF loaded');
+
+        // Fetch the first page
+        var pageNumber = 1;
+        pdf.getPage(pageNumber).then(function (page) {
+          console.log('Page loaded');
+
+          var scale = 1.5;
+          var viewport = page.getViewport({
+            scale: scale
+          });
+
+          // Prepare canvas using PDF page dimensions
+          var canvas = document.getElementById('<%= file.filename%>');
+          var context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          // Render PDF page into canvas context
+          var renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+          var renderTask = page.render(renderContext);
+          renderTask.promise.then(function () {
+            console.log('Page rendered');
+          });
+        });
+      }, function (reason) {
+        // PDF loading error
+        console.error(reason);
+      });
+    </script>
+    <!-- Download and Previwer form -->
+    <form action="/pdf/<%= file.filename%>" method="GET" target="_blank">
+      <label for='download'><input type="submit" value="View the pdf"></label>
+      <a href="/pdf/<%= file.filename %>" target="_blank" rel="noopener noreferrer" download>Download the PDF</a>
+      <h1>Author : <%= file.metadata.author  %></h1>
+      <h2>Desc : <%= file.metadata.desc  %></h2>
+    </form>
+    <% })} %> <!-- Ending of that if statement-->
+    
+
+  </div>
+</body>
+
+</html>
